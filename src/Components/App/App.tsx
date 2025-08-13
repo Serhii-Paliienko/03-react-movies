@@ -2,42 +2,51 @@ import { useState } from "react";
 import SearchBar from "../SearchBar/SearchBar";
 import css from "./App.module.css";
 import { toast, Toaster } from "react-hot-toast";
-import axios from "axios";
+import type { Movie } from "../../types/movie";
+import { fetchMovies } from "../../services/movieService";
+import Loader from "../Loader/Loader";
+import ErrorMessage from "../ErrorMessage/ErrorMessage";
+import MovieGrid from "../MovieGrid/MovieGrid";
+import MovieModal from "../MovieModal/MovieModal";
 
 const App = () => {
-  const [movies, setMovies] = useState<any[]>([]);
-  console.log(movies.length);
-  const API_URL = "https://api.themoviedb.org/3/search/movie";
-  const API_KEY =
-    "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1Nzk2OTJjZmJhMjQwMzMyYmQwN2M3MTkyYmI5ZDIzZCIsIm5iZiI6MTc1NTAyMTM0Mi41ODgsInN1YiI6IjY4OWI4MDFlZGM2MDYwMGU2YThkYjEzNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.D0DZSsiSy283xEZzG5BEg7_E6fDuRrDnVpPzU9M75wE";
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const onSubmit = async (value: string): Promise<void> => {
     setMovies([]);
+    setError(false);
+    setLoading(true);
+
     try {
-      const res = await axios.get(API_URL, {
-        headers: { Authorization: `Bearer ${API_KEY}` },
-        params: {
-          query: value,
-          include_adult: false,
-          language: "en-US",
-          page: 1,
-        },
-      });
-      const results = Array.isArray(res.data?.results) ? res.data.results : [];
+      const results = await fetchMovies(value);
       if (results.length === 0) {
         toast.error("No movies found for your request.");
         return;
-      } else {
-        setMovies(results);
       }
-    } catch (error) {
-      console.log(error);
-      toast.error("Something went wrong. Try again later.");
+      setMovies(results);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   };
   return (
     <div className={css.app}>
       <SearchBar onSubmit={onSubmit} />
       <Toaster />
+      {loading && <Loader />}
+      {!loading && error && <ErrorMessage />}
+      {!loading && !error && movies.length > 0 && (
+        <MovieGrid movies={movies} onSelect={setSelectedMovie} />
+      )}
+      {selectedMovie && (
+        <MovieModal
+          movie={selectedMovie}
+          onClose={() => setSelectedMovie(null)}
+        />
+      )}
     </div>
   );
 };
