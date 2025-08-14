@@ -1,17 +1,20 @@
 import axios from "axios";
 import type { Movie } from "../types/movie";
-import toast from "react-hot-toast";
 
 const API_URL = "https://api.themoviedb.org/3/search/movie";
 
+interface SearchMoviesResponse {
+  results: Movie[];
+}
+
 export async function fetchMovies(query: string): Promise<Movie[]> {
-  const API_TOKEN = import.meta.env.VITE_TMDB_TOKEN as string | undefined;
-  if (!API_TOKEN) {
-    toast.error("Missing TMDB token");
+  const token = import.meta.env.VITE_TMDB_TOKEN as string | undefined;
+  if (!token) {
+    throw new Error("Missing TMDB token");
   }
 
-  const res = await axios.get<{ results: Movie[] }>(API_URL, {
-    headers: { Authorization: `Bearer ${API_TOKEN}` },
+  const { data } = await axios.get<SearchMoviesResponse>(API_URL, {
+    headers: { Authorization: `Bearer ${token}` },
     params: {
       query,
       include_adult: false,
@@ -20,5 +23,5 @@ export async function fetchMovies(query: string): Promise<Movie[]> {
     },
   });
 
-  return Array.isArray(res.data?.results) ? res.data.results : [];
+  return Array.isArray(data?.results) ? data.results : [];
 }
